@@ -1,0 +1,22 @@
+{
+  // 由于标准 JSON 格式不支持注释，因此这里提供一份 JSON5的配置文件模板。
+  // 使用前，你需要修改为自己的配置，将转化为 JSON格式，
+  //
+  // 转化操作：删掉所有的注释，并将它命名为 config.json。
+
+  // 当前程序所在主机的局域网IP
+  "myIP": "192.168.31.51",
+  // 目标主机的主板网卡MAC地址
+  "targetMac": "9c:6b:00:5f:a7:35",
+  // 巴法云的 UID
+  "uid": "25cf68d711fd460585cfdb9f1d5bfd33",
+  // topic-switch
+  "switch": {
+    // 主题的名称
+    "topic": "XXX006",
+    // Switch 只接收 on/off 两种指令，对应的操作
+    // 覆盖这里的指令之前，你应该在默认的 shell，Linux(sh)/Windows(cmd) 中测试一下，以确保关机指令和取消指令是正确的。
+    "on": "ssh -l someone@outlook.com -p 17022 -i C:/Users/username/.ssh/id_ed25519 192.168.31.50 \"cmd /c shutdown /a\"",
+    "off": "ssh -l someone@outlook.com -p 17022 -i C:/Users/username/.ssh/id_ed25519 192.168.31.50 \"cmd /c shutdown /s /t 600\""
+  }
+}
