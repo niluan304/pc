@@ -18,5 +18,7 @@
     // 覆盖这里的指令之前，你应该在默认的 shell，Linux(sh)/Windows(cmd) 中测试一下，以确保关机指令和取消指令是正确的。
     "on": "ssh -l someone@outlook.com -p 17022 -i C:/Users/username/.ssh/id_ed25519 192.168.31.50 \"cmd /c shutdown /a\"",
     "off": "ssh -l someone@outlook.com -p 17022 -i C:/Users/username/.ssh/id_ed25519 192.168.31.50 \"cmd /c shutdown /s /t 600\""
+    // 你也可以填写 shell 脚本的绝对路径，然后在脚本文件中编写执行命令，这样会更方便调试和修改脚本
+    // "off": "shutdown.sh"
   }
 }
