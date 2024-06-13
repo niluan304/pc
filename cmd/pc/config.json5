@@ -5,20 +5,29 @@
   // 转化操作：删掉所有的注释，并将它命名为 config.json。
 
   // 当前程序所在主机的局域网IP
-  "myIP": "192.168.31.51",
+  "myIP": "",
   // 目标主机的主板网卡MAC地址
-  "targetMac": "9c:6b:00:5f:a7:35",
+  "targetMac": "",
   // 巴法云的 UID
-  "uid": "25cf68d711fd460585cfdb9f1d5bfd33",
+  "uid": "",
+  "ssh": {
+    // host:port 如 192.168.31.111:11022
+    "addr": "",
+    // 用户名，目前支持私钥和密码登录
+    "user": "",
+    // 私钥路径，建议使用绝对地址
+    "identity": "",
+    // 密码明文，应当在局域网环境使用
+    "password": "",
+  },
   // topic-switch
   "switch": {
     // 主题的名称
     "topic": "XXX006",
     // Switch 只接收 on/off 两种指令，对应的操作
     // 覆盖这里的指令之前，你应该在默认的 shell，Linux(sh)/Windows(cmd) 中测试一下，以确保关机指令和取消指令是正确的。
-    "on": "ssh -l someone@outlook.com -p 17022 -i C:/Users/username/.ssh/id_ed25519 192.168.31.50 \"cmd /c shutdown /a\"",
-    "off": "ssh -l someone@outlook.com -p 17022 -i C:/Users/username/.ssh/id_ed25519 192.168.31.50 \"cmd /c shutdown /s /t 600\""
-    // 你也可以填写 shell 脚本的绝对路径，然后在脚本文件中编写执行命令，这样会更方便调试和修改脚本
-    // "off": "shutdown.sh"
+    "on": "cmd /c shutdown /a",
+    "off": "cmd /c shutdown /s /t 600"
   }
 }
+

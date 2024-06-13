@@ -57,8 +57,11 @@ func TestBemfa_Topic(t *testing.T) {
 			}
 
 			go func() {
-				b.Listen()
-				wg.Done()
+				defer wg.Done()
+				err := b.Listen()
+				if err != nil {
+					panic(err)
+				}
 			}()
 		})
 	}

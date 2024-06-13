@@ -18,8 +18,8 @@ func WakeOnLan(mac string, ip string) error {
 	}
 
 	// 广播MAC地址 FF:FF:FF:FF:FF:FF
-	var broadcast = []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
-	var buf = bytes.NewBuffer(broadcast)
+	broadcast := []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
+	buf := bytes.NewBuffer(broadcast)
 
 	for range 16 {
 		buf.Write(hw)

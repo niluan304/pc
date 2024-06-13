@@ -21,12 +21,12 @@ type Bemfa struct {
 const addr = "bemfa.com:8344"
 
 const (
-	cmdPing              = 0 // ping 的响应
-	cmdSubscribe         = 1 // 订阅消息，当设备发送一次此消息类型，之后就可以收到发往该主题的消息
-	cmdPush              = 2 // 发布消息，向订阅该主题的设备发送消息
-	cmdSubscribeWithLast = 3 //订阅消息，和cmd=1相同，并且会拉取一次已发送过的消息
-	cmdTime              = 7 // 获取时间，获取当前北京时间
-	cmdLast              = 9 // 遗嘱消息，拉取一次已经发送的消息
+	cmdPing              = "0" // ping 的响应
+	cmdSubscribe         = "1" // 订阅消息，当设备发送一次此消息类型，之后就可以收到发往该主题的消息
+	cmdPush              = "2" // 发布消息，向订阅该主题的设备发送消息
+	cmdSubscribeWithLast = "3" // 订阅消息，和cmd=1相同，并且会拉取一次已发送过的消息
+	cmdTime              = "7" // 获取时间，获取当前北京时间
+	cmdLast              = "9" // 遗嘱消息，拉取一次已经发送的消息
 )
 
 // New
@@ -41,15 +41,15 @@ func New(uid string, topics map[string]Topic) (*Bemfa, error) {
 		return nil, errors.Join(err, fmt.Errorf("dial error"))
 	}
 
-	var t []string
-	for topic, _ := range topics {
-		t = append(t, topic)
-	}
-
 	b := &Bemfa{
 		conn:   conn,
 		uid:    uid,
 		topics: topics,
+	}
+
+	var t []string
+	for topic := range topics {
+		t = append(t, topic)
 	}
 
 	err = b.subscribe(t...)
@@ -62,8 +62,7 @@ func New(uid string, topics map[string]Topic) (*Bemfa, error) {
 
 // Listen
 // Keepalive and listen to msg
-func (b *Bemfa) Listen() {
-
+func (b *Bemfa) Listen() error {
 	go b.Keepalive()
 
 	for {
@@ -81,9 +80,12 @@ func (b *Bemfa) Listen() {
 // cmd=1&res=1
 func (b *Bemfa) subscribe(topics ...string) error {
 	n := len(topics)
-	const chunk = 8 // 单次最多订阅八个主题
-	for i := 0; i < n; i += chunk {
-		j := min(i+chunk, n)
+	const size = 8 // 单次最多订阅八个主题
+	chunks := (n + size - 1) / size
+	for chunk := range chunks {
+		i := chunk * size
+		j := min(i+size, n)
+
 		topic := strings.Join(topics[i:j], ",")
 
 		err := b.write(fmt.Sprintf(`cmd=1&uid=%s&topic=%s`, b.uid, topic))
@@ -91,20 +93,25 @@ func (b *Bemfa) subscribe(topics ...string) error {
 			return errors.Join(err, fmt.Errorf("subscribe topic(%s) error", topic))
 		}
 	}
-
 	return nil
 }
 
 func (b *Bemfa) listen() error {
-	var buf = make([]byte, 512)
+	buf := make([]byte, 512)
 	n, err := b.conn.Read(buf)
 	if err != nil {
 		return errors.Join(err, fmt.Errorf("read buf error"))
 	}
 
-	reader := bytes.NewReader(bytes.ReplaceAll(buf[:n], []byte(`&`), []byte(` `)))
-	var cmd int
-	_, err = fmt.Fscanf(reader, "cmd=%d ", &cmd) // ping
+	// 请求过多时，可以考虑使用 channel 以实现读写分离
+	return b.handle(buf[:n])
+}
+
+func (b *Bemfa) handle(buf []byte) (err error) {
+	r := bytes.NewReader(bytes.ReplaceAll(buf, []byte(`&`), []byte(` `)))
+
+	var cmd string
+	_, err = fmt.Fscanf(r, "cmd=%s ", &cmd) // ping
 	if err != nil {
 		return errors.Join(err, fmt.Errorf("read cmd error"))
 	}
@@ -112,14 +119,14 @@ func (b *Bemfa) listen() error {
 	switch cmd {
 	case cmdPing, cmdSubscribe:
 		var res string
-		_, err = fmt.Fscanf(reader, "res=%s", &res)
+		_, err = fmt.Fscanf(r, "res=%s", &res)
 		if err != nil {
 			return errors.Join(err, fmt.Errorf("scan(&res) error"))
 		}
 
 	case cmdPush:
 		var uid, topic, msg string
-		_, err = fmt.Fscanf(reader, "uid=%s topic=%s msg=%s", &uid, &topic, &msg)
+		_, err = fmt.Fscanf(r, "uid=%s topic=%s msg=%s", &uid, &topic, &msg)
 		if err != nil {
 			return errors.Join(err, fmt.Errorf("scan(&uid, &topic, &msg) error"))
 		}
