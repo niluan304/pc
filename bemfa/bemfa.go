@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"strings"
@@ -36,24 +37,12 @@ func New(uid string, topics map[string]Topic) (*Bemfa, error) {
 		return nil, errors.New("empty topics")
 	}
 
-	conn, err := net.Dial("tcp", addr)
-	if err != nil {
-		return nil, errors.Join(err, fmt.Errorf("dial error"))
-	}
-
 	b := &Bemfa{
-		conn:   conn,
 		uid:    uid,
 		topics: topics,
 	}
 
-	var t []string
-	for topic := range topics {
-		t = append(t, topic)
-	}
-
-	err = b.subscribe(t...)
-	if err != nil {
+	if err := b.dial(); err != nil {
 		return nil, err
 	}
 
@@ -71,6 +60,20 @@ func (b *Bemfa) Listen() error {
 			log.Println(err)
 		}
 	}
+}
+
+func (b *Bemfa) dial() (err error) {
+	b.conn, err = net.Dial("tcp", addr)
+	if err != nil {
+		return errors.Join(err, fmt.Errorf("fail to dial %s", addr))
+	}
+
+	var topics []string
+	for topic := range b.topics {
+		topics = append(topics, topic)
+	}
+
+	return b.subscribe(topics...)
 }
 
 // 订阅主题
@@ -100,6 +103,9 @@ func (b *Bemfa) listen() error {
 	buf := make([]byte, 512)
 	n, err := b.conn.Read(buf)
 	if err != nil {
+		if errors.Is(err, io.EOF) {
+			return b.subscribe()
+		}
 		return errors.Join(err, fmt.Errorf("read buf error"))
 	}
 
@@ -153,9 +159,8 @@ func (b *Bemfa) handle(buf []byte) (err error) {
 // Call Ping every 30 seconds
 func (b *Bemfa) Keepalive() {
 	for {
-		err := b.Ping()
-		if err != nil {
-			// 重试
+		if err := b.Ping(); err != nil {
+			fmt.Println(err)
 			time.Sleep(time.Second * 2)
 			continue
 		}
@@ -183,11 +188,20 @@ func (b *Bemfa) Ping() error {
 //
 // cmd=9 为遗嘱消息，拉取一次已经发送的消息
 func (b *Bemfa) write(req string) error {
+write:
 	_, err := b.conn.Write([]byte(req + "\r\n"))
 	if err != nil {
-		err = errors.Join(err, fmt.Errorf("send req(%s) error", req))
-		log.Println("write", err)
-		return err
+		type temporary interface {
+			Temporary() bool
+		}
+
+		if t, ok := err.(temporary); ok && t.Temporary() {
+			time.Sleep(time.Second)
+			goto write
+		}
+
+		_ = b.conn.Close()
+		return errors.Join(err, fmt.Errorf("fail to write(%s)", req))
 	}
 
 	return nil
