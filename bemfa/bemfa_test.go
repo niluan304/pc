@@ -1,12 +1,11 @@
-package bemfa_test
+package bemfa
 
 import (
 	"log"
 	"os"
 	"sync"
 	"testing"
-
-	"github.com/nilluan304/pc/bemfa"
+	"time"
 )
 
 func TestBemfa_Topic(t *testing.T) {
@@ -15,18 +14,12 @@ func TestBemfa_Topic(t *testing.T) {
 
 	type args struct {
 		uid    string
-		topics map[string]bemfa.Topic
+		topics map[string]Topic
 	}
 
-	switchTopic := bemfa.NewSwitch(
-		func() error {
-			log.Printf("here is on\n")
-			return nil
-		},
-		func() error {
-			log.Printf("here is off\n")
-			return nil
-		},
+	switchTopic := NewSwitch(
+		func() error { log.Printf("here is on \n"); return nil },
+		func() error { log.Printf("here is off\n"); return nil },
 	)
 
 	tests := []struct {
@@ -38,7 +31,7 @@ func TestBemfa_Topic(t *testing.T) {
 			name: "switch",
 			args: args{
 				uid: uid,
-				topics: map[string]bemfa.Topic{
+				topics: map[string]Topic{
 					topic: switchTopic,
 				},
 			},
@@ -50,7 +43,7 @@ func TestBemfa_Topic(t *testing.T) {
 	for _, tt := range tests {
 		wg.Add(1)
 		t.Run(tt.name, func(t *testing.T) {
-			b, err := bemfa.New(tt.args.uid, tt.args.topics)
+			b, err := New(tt.args.uid, tt.args.topics)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -66,4 +59,49 @@ func TestBemfa_Topic(t *testing.T) {
 		})
 	}
 	wg.Wait()
+}
+
+func TestBemfa_Listen(t *testing.T) {
+	topic := os.Getenv("topic")
+	uid := os.Getenv("uid")
+
+	type args struct {
+		uid    string
+		topics map[string]Topic
+	}
+
+	switchTopic := NewSwitch(
+		func() error { log.Printf("here is on \n"); return nil },
+		func() error { log.Printf("here is off\n"); return nil },
+	)
+
+	arg0 := args{
+		uid: uid,
+		topics: map[string]Topic{
+			topic: switchTopic,
+		},
+	}
+
+	b, err := New(arg0.uid, arg0.topics)
+	if err != nil {
+		t.Errorf("New() error = %v, wantErr %v", err, nil)
+		return
+	}
+
+	go b.connect()
+
+	go func() {
+		for {
+			time.Sleep(time.Minute * 2) // make bemfa disconnect
+			if err := b.Ping(); err != nil {
+				t.Log(err)
+			}
+		}
+	}()
+
+	for {
+		if err := b.listen(); err != nil {
+			t.Log(err)
+		}
+	}
 }

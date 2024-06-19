@@ -17,6 +17,8 @@ type Bemfa struct {
 	conn   net.Conn
 	uid    string
 	topics map[string]Topic
+
+	disconnect chan struct{}
 }
 
 const addr = "bemfa.com:8344"
@@ -37,22 +39,26 @@ func New(uid string, topics map[string]Topic) (*Bemfa, error) {
 		return nil, errors.New("empty topics")
 	}
 
-	b := &Bemfa{
-		uid:    uid,
-		topics: topics,
+	conn, err := dial()
+	if err != nil {
+		return nil, err
 	}
 
-	if err := b.dial(); err != nil {
-		return nil, err
+	b := &Bemfa{
+		conn:       conn,
+		uid:        uid,
+		topics:     topics,
+		disconnect: make(chan struct{}),
 	}
 
 	return b, nil
 }
 
 // Listen
-// Keepalive and listen to msg
+// keepalive and listen to msg
 func (b *Bemfa) Listen() error {
-	go b.Keepalive()
+	go b.connect()
+	go b.keepalive()
 
 	for {
 		err := b.listen()
@@ -62,18 +68,30 @@ func (b *Bemfa) Listen() error {
 	}
 }
 
-func (b *Bemfa) dial() (err error) {
-	b.conn, err = net.Dial("tcp", addr)
+func dial() (net.Conn, error) {
+	conn, err := net.Dial("tcp", addr)
 	if err != nil {
-		return errors.Join(err, fmt.Errorf("fail to dial %s", addr))
+		return nil, errors.Join(err, fmt.Errorf("fail to dial %s", addr))
 	}
 
-	var topics []string
-	for topic := range b.topics {
-		topics = append(topics, topic)
-	}
+	return conn, nil
+}
 
-	return b.subscribe(topics...)
+func (b *Bemfa) connect() {
+	for {
+		_ = b.subscribe()
+
+		<-b.disconnect
+
+		conn, err := dial()
+		if err != nil {
+			fmt.Println(err)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		b.conn = conn
+	}
 }
 
 // 订阅主题
@@ -81,7 +99,12 @@ func (b *Bemfa) dial() (err error) {
 //
 // 正常返回：
 // cmd=1&res=1
-func (b *Bemfa) subscribe(topics ...string) error {
+func (b *Bemfa) subscribe() error {
+	var topics []string
+	for topic := range b.topics {
+		topics = append(topics, topic)
+	}
+
 	n := len(topics)
 	const size = 8 // 单次最多订阅八个主题
 	chunks := (n + size - 1) / size
@@ -104,8 +127,15 @@ func (b *Bemfa) listen() error {
 	n, err := b.conn.Read(buf)
 	if err != nil {
 		if errors.Is(err, io.EOF) {
-			return b.subscribe()
+			return nil
 		}
+
+		if t, ok := err.(temporary); ok && t.Temporary() {
+			time.Sleep(time.Second)
+			return nil
+		}
+
+		b.disconnect <- struct{}{}
 		return errors.Join(err, fmt.Errorf("read buf error"))
 	}
 
@@ -155,9 +185,9 @@ func (b *Bemfa) handle(buf []byte) (err error) {
 	return nil
 }
 
-// Keepalive
+// keepalive
 // Call Ping every 30 seconds
-func (b *Bemfa) Keepalive() {
+func (b *Bemfa) keepalive() {
 	for {
 		if err := b.Ping(); err != nil {
 			fmt.Println(err)
@@ -191,18 +221,19 @@ func (b *Bemfa) write(req string) error {
 write:
 	_, err := b.conn.Write([]byte(req + "\r\n"))
 	if err != nil {
-		type temporary interface {
-			Temporary() bool
-		}
-
 		if t, ok := err.(temporary); ok && t.Temporary() {
 			time.Sleep(time.Second)
 			goto write
 		}
 
 		_ = b.conn.Close()
+		b.disconnect <- struct{}{}
 		return errors.Join(err, fmt.Errorf("fail to write(%s)", req))
 	}
 
 	return nil
+}
+
+type temporary interface {
+	Temporary() bool
 }
