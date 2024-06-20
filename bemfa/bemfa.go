@@ -39,16 +39,14 @@ func New(uid string, topics map[string]Topic) (*Bemfa, error) {
 		return nil, errors.New("empty topics")
 	}
 
-	conn, err := dial()
-	if err != nil {
-		return nil, err
-	}
-
 	b := &Bemfa{
-		conn:       conn,
 		uid:        uid,
 		topics:     topics,
 		disconnect: make(chan struct{}),
+	}
+
+	if err := b.subscribe(); err != nil {
+		return nil, err
 	}
 
 	return b, nil
@@ -57,7 +55,7 @@ func New(uid string, topics map[string]Topic) (*Bemfa, error) {
 // Listen
 // keepalive and listen to msg
 func (b *Bemfa) Listen() error {
-	go b.connect()
+	go b.reconnect()
 	go b.keepalive()
 
 	for {
@@ -68,29 +66,27 @@ func (b *Bemfa) Listen() error {
 	}
 }
 
-func dial() (net.Conn, error) {
-	conn, err := net.Dial("tcp", addr)
-	if err != nil {
-		return nil, errors.Join(err, fmt.Errorf("fail to dial %s", addr))
-	}
+// 触发 disconnect 信号时，重新连接 bemfa.com
+func (b *Bemfa) reconnect() {
+	last := time.Now()
 
-	return conn, nil
-}
-
-func (b *Bemfa) connect() {
 	for {
-		_ = b.subscribe()
-
 		<-b.disconnect
 
-		conn, err := dial()
-		if err != nil {
-			fmt.Println(err)
-			time.Sleep(2 * time.Second)
+		// 2s 内最多重连一次
+		now := time.Now()
+		if last.Add(2 * time.Second).After(now) {
 			continue
 		}
+		last = now
 
-		b.conn = conn
+		// 匿名函数里执行任务，避免写 if err != nil { return }, 跳出 for 循环
+		func() {
+			if err := b.subscribe(); err != nil {
+				log.Println(err)
+				return
+			}
+		}()
 	}
 }
 
@@ -100,6 +96,13 @@ func (b *Bemfa) connect() {
 // 正常返回：
 // cmd=1&res=1
 func (b *Bemfa) subscribe() error {
+	conn, err := net.Dial("tcp", addr)
+	if err != nil {
+		return errors.Join(err, fmt.Errorf("fail to dial %s", addr))
+	}
+
+	b.conn = conn
+
 	var topics []string
 	for topic := range b.topics {
 		topics = append(topics, topic)
@@ -114,9 +117,9 @@ func (b *Bemfa) subscribe() error {
 
 		topic := strings.Join(topics[i:j], ",")
 
-		err := b.write(fmt.Sprintf(`cmd=1&uid=%s&topic=%s`, b.uid, topic))
+		err := b.write(fmt.Sprintf(`cmd=%s&uid=%s&topic=%s`, cmdSubscribe, b.uid, topic))
 		if err != nil {
-			return errors.Join(err, fmt.Errorf("subscribe topic(%s) error", topic))
+			return errors.Join(err, fmt.Errorf("fail to subscribe topic(%s)", topic))
 		}
 	}
 	return nil
@@ -136,7 +139,7 @@ func (b *Bemfa) listen() error {
 		}
 
 		b.disconnect <- struct{}{}
-		return errors.Join(err, fmt.Errorf("read buf error"))
+		return errors.Join(err, fmt.Errorf("conn fail to read buf"))
 	}
 
 	// 请求过多时，可以考虑使用 channel 以实现读写分离
@@ -149,7 +152,7 @@ func (b *Bemfa) handle(buf []byte) (err error) {
 	var cmd string
 	_, err = fmt.Fscanf(r, "cmd=%s ", &cmd) // ping
 	if err != nil {
-		return errors.Join(err, fmt.Errorf("read cmd error"))
+		return errors.Join(err, fmt.Errorf("handle fail to read cmd"))
 	}
 
 	switch cmd {
@@ -157,14 +160,14 @@ func (b *Bemfa) handle(buf []byte) (err error) {
 		var res string
 		_, err = fmt.Fscanf(r, "res=%s", &res)
 		if err != nil {
-			return errors.Join(err, fmt.Errorf("scan(&res) error"))
+			return errors.Join(err, fmt.Errorf("fail to scan(&res)"))
 		}
 
 	case cmdPush:
 		var uid, topic, msg string
 		_, err = fmt.Fscanf(r, "uid=%s topic=%s msg=%s", &uid, &topic, &msg)
 		if err != nil {
-			return errors.Join(err, fmt.Errorf("scan(&uid, &topic, &msg) error"))
+			return errors.Join(err, fmt.Errorf("fail to scan(&uid, &topic, &msg)"))
 		}
 
 		if uid != b.uid {
@@ -178,7 +181,7 @@ func (b *Bemfa) handle(buf []byte) (err error) {
 
 		err = t.Handle(msg)
 		if err != nil {
-			return errors.Join(err, fmt.Errorf("handle msg(%s) error", msg))
+			return errors.Join(err, fmt.Errorf("fail to handle msg(%s)", msg))
 		}
 	}
 
@@ -190,7 +193,7 @@ func (b *Bemfa) handle(buf []byte) (err error) {
 func (b *Bemfa) keepalive() {
 	for {
 		if err := b.Ping(); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			time.Sleep(time.Second * 2)
 			continue
 		}
