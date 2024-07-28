@@ -48,7 +48,5 @@ func WakeOnLan(mac string, ip string) error {
 		return errors.Join(err, fmt.Errorf("send magic package error： %s", mp))
 	}
 
-	// todo 重试机制
-
 	return nil
 }
