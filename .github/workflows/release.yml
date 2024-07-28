@@ -1,0 +1,36 @@
+name: PC Release
+
+on:
+  release:
+    types: [created]
+
+env:
+  TZ: Asia/Shanghai
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  releases-matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [ linux, windows ] # 需要打包的系统
+        goarch: [ amd64, arm64, mipsle ] # 需要打包的架构
+        exclude: # 排除某些平台和架构
+          - goarch: arm64
+            goos: windows
+          - goarch: mipsle
+            goos: windows
+    steps:
+      - uses: actions/checkout@v4
+      - uses: wangyoucao577/go-release-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }} # 一个默认的变量，用来实现往 Release 中添加文件
+          goos: ${{ matrix.goos }}
+          goarch: ${{ matrix.goarch }}
+#          goversion: 1.22.3 # 指定编译使用的 Golang 版本
+          project_path: "./cmd/pc" # cmd目录
+          binary_name: "pc"  # 可以指定二进制文件的名称
+          extra_files: LICENSE README.md cmd/pc/config.json5 # 需要包含的额外文件
