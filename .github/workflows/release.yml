@@ -2,7 +2,7 @@ name: PC Release
 
 on:
   release:
-    types: [created]
+    types: [ created ] # 创建 Release 时，自动编译并上传到 Asset
 
 env:
   TZ: Asia/Shanghai
@@ -16,8 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goos: [ linux, windows ] # 需要打包的系统
-        goarch: [ amd64, arm64, mipsle ] # 需要打包的架构
+        goos: [ linux, windows ]          # 需要打包的系统
+        goarch: [ amd64, arm64, mipsle ]  # 需要打包的架构
         exclude: # 排除某些平台和架构
           - goarch: arm64
             goos: windows
@@ -27,10 +27,17 @@ jobs:
       - uses: actions/checkout@v4
       - uses: wangyoucao577/go-release-action@v1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }} # 一个默认的变量，用来实现往 Release 中添加文件
+          github_token: ${{ secrets.GITHUB_TOKEN }} # GitHub action 生成的 token，用于 Release.Asset 中添加文件
+
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
-#          goversion: 1.22.3 # 指定编译使用的 Golang 版本
-          project_path: "./cmd/pc" # cmd目录
-          binary_name: "pc"  # 可以指定二进制文件的名称
-          extra_files: LICENSE README.md cmd/pc/config.json5 # 需要包含的额外文件
+
+
+          # goversion: 1.22.3     # 指定编译使用的 Golang 版本，注释时默认使用最新的编译器
+          build_flags: -trimpath  # 编译标识，去除前缀路径信息，只打印相对路径
+          ldflags: -w -s          # -w: 去除调试信息。会减小可执行文件的大小。-s: 去掉符号表信息。
+
+
+          project_path: "./cmd/pc"                            # 编译入口
+          binary_name: "pc"                                   # 指定二进制文件的名称
+          extra_files: LICENSE README.md cmd/pc/config.json5  # 需要包含的额外文件
