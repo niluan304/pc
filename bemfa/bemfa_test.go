@@ -1,7 +1,7 @@
 package bemfa
 
 import (
-	"log"
+	"log/slog"
 	"os"
 	"sync"
 	"testing"
@@ -18,8 +18,8 @@ func TestBemfa_Topic(t *testing.T) {
 	}
 
 	switchTopic := NewSwitch(
-		func() error { log.Printf("here is on \n"); return nil },
-		func() error { log.Printf("here is off\n"); return nil },
+		func() error { slog.Info("here is on \n"); return nil },
+		func() error { slog.Info("here is off\n"); return nil },
 	)
 
 	tests := []struct {
@@ -71,8 +71,8 @@ func TestBemfa_Listen(t *testing.T) {
 	}
 
 	switchTopic := NewSwitch(
-		func() error { log.Printf("here is on \n"); return nil },
-		func() error { log.Printf("here is off\n"); return nil },
+		func() error { slog.Info("here is on \n"); return nil },
+		func() error { slog.Info("here is off\n"); return nil },
 	)
 
 	arg0 := args{
@@ -116,8 +116,8 @@ func TestBemfa_reconnect(t *testing.T) {
 	}
 
 	switchTopic := NewSwitch(
-		func() error { log.Printf("here is on \n"); return nil },
-		func() error { log.Printf("here is off\n"); return nil },
+		func() error { slog.Info("here is on "); return nil },
+		func() error { slog.Info("here is off"); return nil },
 	)
 
 	arg0 := args{

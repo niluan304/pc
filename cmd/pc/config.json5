@@ -11,9 +11,6 @@
   // windows 机器可以在命令行中输入 `ipconfig /all` 查看，如：00-1B-44-11-3A-B7
   "targetMac": "",
 
-  // 巴法云的 UID，即控制台的私钥
-  "uid": "",
-
   "ssh": {
     // 目标主机的 IP + SSH 端口号 
     // host:port 如 192.168.31.111:11022
@@ -32,6 +29,27 @@
     // 密码明文，应当在局域网环境使用
     "password": ""
   },
+
+  // 日志文件
+  "log": {
+
+    // 日志文件位置，默认为 pc.log
+    "file": "/tmp/log/pc.log",
+
+    // 是否打印代码位置
+    "addSource": false,
+
+    // 日志级别
+    // log/slog/level.go:43
+    // LevelDebug Level = -4
+    // LevelInfo  Level = 0
+    // LevelWarn  Level = 4
+    // LevelError Level = 8
+    level: 0
+  },
+
+  // 巴法云的 UID，即控制台的私钥
+  "uid": "",
 
   // topic-switch
   "switch": {

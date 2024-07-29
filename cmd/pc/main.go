@@ -2,9 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"runtime"
 
@@ -28,25 +28,37 @@ Env Info:
 Ref: %s
 `, commit, version, buildTime, runtime.Version(), ref)
 
-	var (
-		config = flag.String("config", "config.json", "config file")
-	)
+	config := flag.String("config", "config.json", "config file")
 
 	flag.Parse()
 
-	file, err := os.ReadFile(*config)
+	err := Load(*config)
 	if err != nil {
-		log.Println("os.ReadFile error", err)
-		panic(err)
+		file, err2 := os.OpenFile("pc.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0o664)
+		if err2 != nil {
+			panic(errors.Join(err, err2))
+		}
+
+		_, err3 := file.WriteString(err.Error() + "\n")
+		panic(errors.Join(err, err2, err3))
+	}
+}
+
+func Load(file string) error {
+	data, err := os.ReadFile(file)
+	if err != nil {
+		return fmt.Errorf("read file: %+v, error: %w", file, err)
 	}
 
-	var cfg *pc.Config
-	if err := json.Unmarshal(file, &cfg); err != nil {
-		log.Println("json.Unmarshal error", err)
-		panic(err)
+	var config *pc.Config
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		return fmt.Errorf("json unmarshal: %s, error: %w", data, err)
 	}
 
-	if err := pc.Run(cfg); err != nil {
-		panic(err)
+	err = pc.Run(config)
+	if err != nil {
+		return fmt.Errorf("pc run, error: %w", err)
 	}
+	return nil
 }

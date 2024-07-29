@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net"
 	"strings"
 	"time"
@@ -19,6 +19,8 @@ type Bemfa struct {
 	topics map[string]Topic
 
 	disconnect chan struct{}
+
+	logger *slog.Logger
 }
 
 const addr = "bemfa.com:8344"
@@ -32,9 +34,21 @@ const (
 	cmdLast              = "9" // 遗嘱消息，拉取一次已经发送的消息
 )
 
+type Option func(*Bemfa)
+
+func WithLogger(logger *slog.Logger) Option {
+	return func(b *Bemfa) {
+		if logger == nil {
+			return
+		}
+
+		b.logger = logger
+	}
+}
+
 // New
 // return Bemfa client that subscribe topics
-func New(uid string, topics map[string]Topic) (*Bemfa, error) {
+func New(uid string, topics map[string]Topic, opts ...Option) (*Bemfa, error) {
 	if len(topics) == 0 {
 		return nil, errors.New("empty topics")
 	}
@@ -43,6 +57,11 @@ func New(uid string, topics map[string]Topic) (*Bemfa, error) {
 		uid:        uid,
 		topics:     topics,
 		disconnect: make(chan struct{}),
+		logger:     slog.Default(),
+	}
+
+	for _, opt := range opts {
+		opt(b)
 	}
 
 	if err := b.subscribe(); err != nil {
@@ -61,7 +80,7 @@ func (b *Bemfa) Listen() error {
 	for {
 		err := b.listen()
 		if err != nil {
-			log.Println(err)
+			b.logger.Error("Listen", "err", err)
 		}
 	}
 }
@@ -82,8 +101,10 @@ func (b *Bemfa) reconnect() {
 
 		// 匿名函数里执行任务，避免写 if err != nil { return }, 跳出 for 循环
 		func() {
+			b.logger.Warn("reconnect when disconnect")
+
 			if err := b.subscribe(); err != nil {
-				log.Println(err)
+				b.logger.Error("reconnect with subscribe", "err", err)
 				return
 			}
 		}()
@@ -147,12 +168,14 @@ func (b *Bemfa) listen() error {
 }
 
 func (b *Bemfa) handle(buf []byte) (err error) {
+	b.logger.Debug("handle", "msg", string(buf))
+
 	r := bytes.NewReader(bytes.ReplaceAll(buf, []byte(`&`), []byte(` `)))
 
 	var cmd string
 	_, err = fmt.Fscanf(r, "cmd=%s ", &cmd) // ping
 	if err != nil {
-		return errors.Join(err, fmt.Errorf("handle fail to read cmd"))
+		return errors.Join(err, fmt.Errorf("handle fail to read cmd from: %s", buf))
 	}
 
 	switch cmd {
@@ -160,14 +183,14 @@ func (b *Bemfa) handle(buf []byte) (err error) {
 		var res string
 		_, err = fmt.Fscanf(r, "res=%s", &res)
 		if err != nil {
-			return errors.Join(err, fmt.Errorf("fail to scan(&res)"))
+			return errors.Join(err, fmt.Errorf("fail to scan(&res) from: %s", buf))
 		}
 
 	case cmdPush:
 		var uid, topic, msg string
 		_, err = fmt.Fscanf(r, "uid=%s topic=%s msg=%s", &uid, &topic, &msg)
 		if err != nil {
-			return errors.Join(err, fmt.Errorf("fail to scan(&uid, &topic, &msg)"))
+			return errors.Join(err, fmt.Errorf("fail to scan(&uid, &topic, &msg) from: %s", buf))
 		}
 
 		if uid != b.uid {
@@ -193,7 +216,7 @@ func (b *Bemfa) handle(buf []byte) (err error) {
 func (b *Bemfa) keepalive() {
 	for {
 		if err := b.Ping(); err != nil {
-			log.Println(err)
+			b.logger.Error("keepalive", "err", err)
 			time.Sleep(time.Second * 2)
 			continue
 		}
@@ -222,6 +245,8 @@ func (b *Bemfa) Ping() error {
 // cmd=9 为遗嘱消息，拉取一次已经发送的消息
 func (b *Bemfa) write(req string) error {
 write:
+	b.logger.Debug("write", "req", req)
+
 	_, err := b.conn.Write([]byte(req + "\r\n"))
 	if err != nil {
 		if t, ok := err.(temporary); ok && t.Temporary() {

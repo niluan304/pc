@@ -11,6 +11,8 @@ type Config struct {
 
 	SSH *SSH `json:"ssh,omitempty"` // 目标主机的 ssh 配置
 
+	Log *Log `json:"log,omitempty"` // 日志配置
+
 	Uid    string `json:"uid"` // 巴法云配置
 	Switch struct {
 		Topic string `json:"topic"` // 巴法云 topic 名称
@@ -21,30 +23,46 @@ type Config struct {
 
 func Run(config *Config) error {
 	s := bemfa.NewSwitch(
-		func() error {
-			_ = config.SSH.Command(config.Switch.On)
+		// todo handle Command out
 
-			if err := wol.WakeOnLan(config.TargetMac, config.MyIP); err != nil {
+		func() (err error) {
+			out, _ := config.SSH.Command(config.Switch.On)
+			_ = out
+
+			err = wol.WakeOnLan(config.TargetMac, config.MyIP)
+			if err != nil {
 				return err
 			}
 
 			return nil
 		},
-		func() error {
-			if err := config.SSH.Command(config.Switch.Off); err != nil {
+		func() (err error) {
+			out, err := config.SSH.Command(config.Switch.Off)
+			if err != nil {
 				return err
 			}
+
+			_ = out
 
 			return nil
 		},
 	)
 
-	b, err := bemfa.New(config.Uid, map[string]bemfa.Topic{
-		config.Switch.Topic: s,
-	})
+	logger, err := config.Log.Logger()
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	topics := map[string]bemfa.Topic{
+		config.Switch.Topic: s,
+	}
+
+	b, err := bemfa.New(config.Uid, topics, bemfa.WithLogger(logger.WithGroup("bemfa")))
+	if err != nil {
+		return err
+	}
+
+	logger.Info("pc start", "listen bemfa", topics)
 
 	return b.Listen()
 }
