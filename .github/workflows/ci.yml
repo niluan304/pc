@@ -1,0 +1,45 @@
+name: PC CI
+
+on:
+  push:
+    branches:
+      - main
+      - feat/**
+      - fix/**
+
+  pull_request:
+    branches:
+      - main
+      - feat/**
+      - fix/**
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ '1.22.x' ]           # wol/wol.go:24 使用了 go1.22 的新特性 `for range 16`
+        #goos: [ linux, windows ]          # 需要打包的系统
+        #goarch: [ amd64, arm64, mipsle ]  # 需要打包的架构
+        #exclude: # 排除某些平台和架构
+        #  - goarch: arm64
+        #    goos: windows
+        #  - goarch: mipsle
+        #    goos: windows
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Build
+        run: go build -v -x cmd/pc/main.go
+      ## todo Add Test, I have no idea to write test cases
+      #- name: Go Test
+      #  run: go test -json > TestResults-${{ matrix.go-version }}.json
+      #- name: Upload Go Test Results
+      #  uses: actions/upload-artifact@v4
+      #  with:
+      #    name: Go-results-${{ matrix.go-version }}
+      #    path: TestResults-${{ matrix.go-version }}.json

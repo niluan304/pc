@@ -1,8 +1,9 @@
 name: PC Release
 
 on:
-  release:
-    types: [ created ] # 创建 Release 时，自动编译并上传到 Asset
+  push:
+    tags:
+      - "v*.*.*"
 
 env:
   TZ: Asia/Shanghai
@@ -24,8 +25,22 @@ jobs:
           - goarch: mipsle
             goos: windows
     steps:
-      - uses: actions/checkout@v4
-      - uses: wangyoucao577/go-release-action@v1
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        # env:
+        #   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set APP_VERSION env
+        run: echo APP_VERSION=$(echo ${GITHUB_REF} | rev | cut -d'/' -f 1 | rev ) >> ${GITHUB_ENV}
+      - name: Set BUILD_TIME env
+        run: echo BUILD_TIME=$(date) >> ${GITHUB_ENV}
+      - name: Environment Printer
+        uses: managedkaos/print-env@v1.0
+      - name: Upload Release Asset
+        uses: wangyoucao577/go-release-action@v1 # 要求 Release 已存在，所以得是 on:{ release: { types: [ created ] } }
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }} # GitHub action 生成的 token，用于 Release.Asset 中添加文件
 
