@@ -15,15 +15,6 @@ permissions:
 jobs:
   releases-matrix:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        goos: [ linux, windows ]          # 需要打包的系统
-        goarch: [ amd64, arm64, mipsle ]  # 需要打包的架构
-        exclude: # 排除某些平台和架构
-          - goarch: arm64
-            goos: windows
-          - goarch: mipsle
-            goos: windows
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -32,27 +23,3 @@ jobs:
         uses: softprops/action-gh-release@v2
         # env:
         #   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set APP_VERSION env
-        run: echo APP_VERSION=$(echo ${GITHUB_REF} | rev | cut -d'/' -f 1 | rev ) >> ${GITHUB_ENV}
-      - name: Set BUILD_TIME env
-        run: echo BUILD_TIME=$(date) >> ${GITHUB_ENV}
-      - name: Environment Printer
-        uses: managedkaos/print-env@v1.0
-      - name: Upload Release Asset
-        uses: wangyoucao577/go-release-action@v1 # 要求 Release 已存在，所以得是 on:{ release: { types: [ created ] } }
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }} # GitHub action 生成的 token，用于 Release.Asset 中添加文件
-
-          goos: ${{ matrix.goos }}
-          goarch: ${{ matrix.goarch }}
-
-
-          # goversion: 1.22.3     # 指定编译使用的 Golang 版本，注释时默认使用最新的编译器
-          build_flags: -trimpath  # 编译标识，去除前缀路径信息，只打印相对路径
-          ldflags: -w -s          # -w: 去除调试信息。会减小可执行文件的大小。-s: 去掉符号表信息。
-
-
-          project_path: "./cmd/pc"                            # 编译入口
-          binary_name: "pc"                                   # 指定二进制文件的名称
-          extra_files: LICENSE README.md cmd/pc/config.json5  # 需要包含的额外文件
