@@ -59,54 +59,72 @@ LEDE_ARCH="aarch64_cortex-a53" # cortex-a53 是 实现ARMv8-A 64位指令集的�
 //
 // 转化操作：删掉所有的注释，并将它命名为 config.json。
 {
-  // 当前程序所在主机的局域网IP，即通过 SSH/Telnet 登录的设备，一般为路由器/NAS
-  // 小米路由器的局域网IP一般为：192.168.31.1
-  "myIP": "",
+   // 当前程序所在主机的局域网IP，即通过 SSH/Telnet 登录的设备，一般为路由器/NAS
+   // 小米路由器的局域网IP一般为：192.168.31.1
+   "myIP": "",
 
-  // 目标主机的主板网卡MAC地址，
-  // windows 机器可以在命令行中输入 `ipconfig /all` 查看，如：00-1B-44-11-3A-B7
-  "targetMac": "",
+   // 目标主机的主板网卡MAC地址，
+   // windows 机器可以在命令行中输入 `ipconfig /all` 查看，如：00-1B-44-11-3A-B7
+   "targetMac": "",
 
-  // 巴法云的 UID，即控制台的私钥
-  "uid": "",
+   "ssh": {
+      // 目标主机的 IP + SSH 端口号 
+      // host:port 如 192.168.31.111:11022
+      "addr": "",
 
-  "ssh": {
-    // 目标主机的 IP + SSH 端口号 
-    // host:port 如 192.168.31.111:11022
-    "addr": "",
+      // 用户名，目前支持私钥和密码登录
+      "user": "",
 
-    // 用户名，目前支持私钥和密码登录
-    "user": "",
-     
-    // 通过公私钥登录，推荐使用
-    // 私钥可通过 `ssh-keygen -t ed25519 -f ed25519` 命令生成
-    // 然后将 ed25519 私钥上传至
-    // 私钥路径，建议使用绝对地址
-    "identity": "",
+      // 通过公私钥登录，推荐使用
+      // 私钥可通过 `ssh-keygen -t ed25519 -f ed25519` 命令生成
+      // 然后将 ed25519 私钥上传至
+      // 私钥路径，建议使用绝对地址
+      "identity": "",
 
-    // 使用密码登录，可选项
-    // 密码明文，应当在局域网环境使用
-    "password": ""
-  },
+      // 使用密码登录，可选项
+      // 密码明文，应当在局域网环境使用
+      "password": ""
+   },
 
-  // topic-switch
-  "switch": {
-     // 主题的名称
-    "topic": "XXX006",
+   // 日志文件
+   "log": {
 
-    // Switch 只接收 on/off 两种指令，对应的操作
-    // 覆盖这里的指令之前，你应该在默认的 shell，Linux(sh)/Windows(cmd) 中测试一下，以确保关机指令和取消指令是正确的。
-    // Windows 命令：取消关机命令 
-    "on": "cmd /c shutdown /a",
-    // Windows 命令：10分钟后关机
-    "off": "cmd /c shutdown /s /t 600"
-  }
+      // 日志文件位置，默认为 pc.log
+      "file": "/tmp/log/pc.log",
+
+      // 是否打印代码位置
+      "addSource": false,
+
+      // 日志级别
+      // log/slog/level.go:43
+      // LevelDebug Level = -4
+      // LevelInfo  Level = 0
+      // LevelWarn  Level = 4
+      // LevelError Level = 8
+      level: 0
+   },
+
+   // 巴法云的 UID，即控制台的私钥
+   "uid": "",
+
+   // topic-switch
+   "switch": {
+      // 主题的名称
+      "topic": "XXX006",
+
+      // Switch 只接收 on/off 两种指令，对应的操作
+      // 覆盖这里的指令之前，你应该在默认的 shell，Linux(sh)/Windows(cmd) 中测试一下，以确保关机指令和取消指令是正确的。
+      "on": "cmd /c shutdown /a",
+      "off": "cmd /c shutdown /s /t 600"
+   }
 }
+
+
 ```
 
 ### 调试 `pc`
 
-1. 启用 `pc`
+1. 运行 `pc`
    ```bash
    # Linux 机器上，赋予 `pc` 执行权限
    chmod +x pc
@@ -119,14 +137,13 @@ LEDE_ARCH="aarch64_cortex-a53" # cortex-a53 是 实现ARMv8-A 64位指令集的�
    在巴法云控制台，如果连接正常，`pc` 订阅的主题上，会显示订阅者的在线数量：
    ![](https://github.com/niluan304/picx-images-hosting/raw/master/pc/topic.8ojljeijjj.webp)
 
-   -  设备（Windows）处于开机状态 
-      - 推送 `off`，弹窗显示，即将关机：
+   -  设备（Windows）处于开机状态   
+      - 推送 `off`，弹窗显示，即将关机：  
       ![](https://github.com/niluan304/picx-images-hosting/raw/master/pc/switch-off.7zqbzd7e3r.webp)
-      - 推送 `on`，弹窗显示，关机被取消：
+      - 推送 `on`，弹窗显示，关机被取消：  
       ![](https://github.com/niluan304/picx-images-hosting/raw/master/pc/switch-on.3d4oyo8ug8.webp)
 
-   - 设备处于关机机状态
-      在巴法云控制台，并在 `pc` 订阅的主题上推送消息。
+   - 设备处于关机机状态  
       - 推送 `off`，设备无反应
       - 推送 `on`，设备 **开机**
 
@@ -137,7 +154,8 @@ LEDE_ARCH="aarch64_cortex-a53" # cortex-a53 是 实现ARMv8-A 64位指令集的�
    ```
 
 4. 巴法云接入 iot 软件
-- 米家：![](https://github.com/niluan304/picx-images-hosting/raw/master/pc/iot-mijia.lvmqmxpuf.webp)
+- 米家：  
+  ![](https://github.com/niluan304/picx-images-hosting/raw/master/pc/iot-mijia.lvmqmxpuf.webp)
 
 
 
@@ -145,5 +163,7 @@ LEDE_ARCH="aarch64_cortex-a53" # cortex-a53 是 实现ARMv8-A 64位指令集的�
 - [x] 开关机
 - [ ] 调节显示器亮度
 - [ ] 开关显示器
+- [ ] 调节扬声器音量
+- [ ] 播放器上一曲/下一曲/播放/暂停
 - [ ] 使用 `Rust` 重写（低优先级）
 - [ ] 其他平台（低优先级）

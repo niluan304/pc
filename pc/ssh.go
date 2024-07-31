@@ -16,7 +16,7 @@ type SSH struct {
 	Password string `json:"password"`
 }
 
-func (s *SSH) Command(cmd string) error {
+func (s *SSH) Command(cmd string) ([]byte, error) {
 	var auth []ssh.AuthMethod
 	if s.Password != "" {
 		auth = append(auth, ssh.Password(s.Password))
@@ -39,26 +39,22 @@ func (s *SSH) Command(cmd string) error {
 		Timeout:           20 * time.Second,
 	})
 	if err != nil {
-		return errors.Join(err, fmt.Errorf("connect to server (%s) failed", s.Addr))
+		return nil, errors.Join(err, fmt.Errorf("connect to server (%s) failed", s.Addr))
 	}
 	defer client.Close()
 
 	session, err := client.NewSession()
 	if err != nil {
-		return errors.Join(err, fmt.Errorf("create session failed"))
+		return nil, errors.Join(err, fmt.Errorf("create session failed"))
 	}
 
 	defer session.Close()
 
-	session.Stdout = os.Stdout
-	session.Stderr = os.Stderr
-	session.Stdin = os.Stdin
-
-	err = session.Run(cmd)
+	out, err := session.CombinedOutput(cmd)
 	if err != nil {
-		return errors.Join(err, fmt.Errorf("execute command (%s) failed", cmd))
+		return nil, errors.Join(err, fmt.Errorf("execute command (%s) failed", cmd))
 	}
-	return nil
+	return out, nil
 }
 
 func WithPrivate(private string) (ssh.AuthMethod, error) {
