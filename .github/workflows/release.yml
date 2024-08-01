@@ -3,7 +3,7 @@ name: PC Release
 on:
   push:
     tags:
-      - "v*.*.*"
+      - "v*.*.*" # 生成的变量：${{ env.GITHUB_REF_NAME }}
 
 env:
   TZ: Asia/Shanghai
@@ -13,7 +13,20 @@ permissions:
   packages: write
 
 jobs:
-  releases-matrix:
+  create-releases:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        # env:
+        #   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  upload-releases-asset:
+    needs:
+      - create-releases
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -28,17 +41,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        # env:
-        #   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set VERSION env
-        run: echo VERSION=$(echo ${GITHUB_REF} | rev | cut -d'/' -f 1 | rev ) >> ${GITHUB_ENV}
-      - name: Set BUILD AT env
-        run: echo BUILD_TIME=$(date) >> ${GITHUB_ENV}
-      - name: Environment Printer
-        uses: managedkaos/print-env@v1.0
+      - name: Set ENV
+        run: |
+          echo BUILD_TIME=$(date --rfc-3339=s) >> ${GITHUB_ENV}       
+          # echo REF=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${GITHUB_REF_NAME} >> ${GITHUB_ENV}
+      # - name: Environment Printer
+      #   uses: managedkaos/print-env@v1.0
       - name: Upload Release Asset
         uses: wangyoucao577/go-release-action@v1 # 要求 Release 已存在，所以得是 on:{ release: { types: [ created ] } }
         with:
@@ -47,21 +55,21 @@ jobs:
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
 
-
-          # goVERSION: 1.22.3     # 指定编译使用的 Golang 版本，注释时默认使用最新的编译器
+          # goVERSION: 1.22.3     # 指定编译使用的 Golang 版本，注释以使用默认配置：最新的编译器
           build_flags: -trimpath  # 编译标识，去除前缀路径信息，只打印相对路径
 
-          # -w: 去除调试信息。会减小可执行文件的大小。
+          # -w: 去除调试信息，无法使用 gdb,dlv DEBUG，且会减小可执行文件的大小。
           # -s: 去掉符号表信息。
           # -X: 注入变量，通常用于版本信息注入。
           ldflags: >
             -w
             -s
-            -X "main.version=${{ env.VERSION }}"
+            -X "main.version=${{ github.ref_name }}"
             -X "main.buildTime=${{ env.BUILD_TIME }}"
             -X "main.commit=${{ github.sha }}"
-            -X "main.ref=${{ github.ref }}"
+            -X "main.ref=${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
 
           project_path: "./cmd/pc"                            # 编译入口
           binary_name: "pc"                                   # 指定二进制文件的名称
           extra_files: LICENSE README.md cmd/pc/config.json5  # 需要包含的额外文件
+
