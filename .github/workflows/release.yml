@@ -71,5 +71,5 @@ jobs:
 
           project_path: "./cmd/pc"                            # 编译入口
           binary_name: "pc"                                   # 指定二进制文件的名称
-          extra_files: LICENSE README.md cmd/pc/config.json5  # 需要包含的额外文件
+          extra_files: LICENSE README.md cmd/pc/config.yml  # 需要包含的额外文件
 

@@ -1,0 +1,58 @@
+# 当前程序所在主机的局域网IP，即通过 SSH/Telnet 登录的设备，一般为路由器/NAS
+# 小米路由器的局域网IP一般为：192.168.31.1
+myIP: ""
+
+# 目标主机的主板网卡MAC地址，
+# windows 机器可以在命令行中输入 `ipconfig /all` 查看，如：00-1B-44-11-3A-B7
+targetMac: ""
+
+# ssh 配置
+ssh:
+  # 目标主机的 IP + SSH 端口号
+  # host:port 如 192.168.31.111:11022
+  addr: ""
+
+  # 用户名，目前支持私钥和密码登录
+  user: ""
+
+  # 通过公私钥登录，推荐使用
+  # 私钥可通过 `ssh-keygen -t ed25519 -f ed25519` 命令生成
+  # 然后将 ed25519 私钥上传至
+  # 私钥路径，建议使用绝对地址
+  identity: ""
+
+  # 使用密码登录，可选项
+  # 密码明文，应当在局域网环境使用
+  password: ""
+
+# 日志设置
+log:
+  # 日志文件位置，默认为 pc.log
+  file: "/tmp/log/pc.log"
+
+  # 是否打印代码位置
+  addSource: false
+
+  # 日志级别
+  # log/slog/level.go:43
+  # LevelDebug Level = -4
+  # LevelInfo  Level = 0
+  # LevelWarn  Level = 4
+  # LevelError Level = 8
+  level: 0
+
+
+bemfa:
+  # 巴法云的 UID，即控制台的私钥
+  uid: ""
+
+  # topic-switch
+  switch:
+
+    # 主题的名称
+    topic: "XXX006"
+
+    # Switch 只接收 on/off 两种指令，对应的操作
+    # 覆盖这里的指令之前，你应该在默认的 shell，Linux(sh)/Windows(cmd) 中测试一下，以确保关机指令和取消指令是正确的。
+    on: "shutdown /a"
+    off: "shutdown /s /t 60"

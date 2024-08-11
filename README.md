@@ -3,14 +3,10 @@
 
 `pc` 需要运行在一台 7*24h 的设备上，如路由器、NAS 等。
 
-`pc` 目前只使用标准库，目的是减少依赖，也因为尚在刚开发阶段，因此很不完善，请见谅。
+`pc` 尚在刚开发阶段，因此很不完善，请见谅。
 
 ## Warning
 由于 `pc` 采用 `go` 语言开发，因此编译文件较大 `3-5 MB`，且需要 GC，不适合在储存和内存比较小的设备运行。
-
-`pc` 使用 `JSON` 作为配置文件，但 `JSON` 文件不支持注释，因此提供了 `JSON5` 作为配置模板，使用前，你需要修改为自己的配置，并将转化为 JSON格式，
-- `JSON5` 转 `JSON`：删掉所有的注释，并将它命名为 `config.json`。
-- 涉及到文件路径的部分，包括但不限于配置文件，这里都建议使用绝对路径，避免文件加载错误。
 
 ## Install
 ### 前置条件
@@ -50,76 +46,68 @@ LEDE_ARCH="aarch64_cortex-a53" # cortex-a53 是 实现ARMv8-A 64位指令集的�
 - 在其他设备上下载后，通过 `scp` 等协议上传到设备
 
 ### 修改配置文件
-`pc` 使用 `json`文件作为配置文件格式，但由于`json`本身不支持注释，因此示例的配置文件为 `json5` 格式，需要手动转化为 `json` 格式。
-启动 `pc` 之前，使用者应当补全空白配置项的值：
+`pc` 使用 `yaml`文件作为配置文件，使用前，使用者应当熟悉一下 `yaml` 的基本语法，以修改或补全空白配置项的值：
 
-```json5
-// 由于标准 JSON 格式不支持注释，因此这里提供一份 JSON5的配置文件模板。
-// 使用前，你需要修改为自己的配置，将转化为 JSON格式，
-//
-// 转化操作：删掉所有的注释，并将它命名为 config.json。
-{
-   // 当前程序所在主机的局域网IP，即通过 SSH/Telnet 登录的设备，一般为路由器/NAS
-   // 小米路由器的局域网IP一般为：192.168.31.1
-   "myIP": "",
+```yaml
+# 当前程序所在主机的局域网IP，即通过 SSH/Telnet 登录的设备，一般为路由器/NAS
+# 小米路由器的局域网IP一般为：192.168.31.1
+myIP: ""
 
-   // 目标主机的主板网卡MAC地址，
-   // windows 机器可以在命令行中输入 `ipconfig /all` 查看，如：00-1B-44-11-3A-B7
-   "targetMac": "",
+# 目标主机的主板网卡MAC地址，
+# windows 机器可以在命令行中输入 `ipconfig /all` 查看，如：00-1B-44-11-3A-B7
+targetMac: ""
 
-   "ssh": {
-      // 目标主机的 IP + SSH 端口号 
-      // host:port 如 192.168.31.111:11022
-      "addr": "",
+# ssh 配置
+ssh:
+   # 目标主机的 IP + SSH 端口号
+   # host:port 如 192.168.31.111:11022
+   addr: ""
 
-      // 用户名，目前支持私钥和密码登录
-      "user": "",
+   # 用户名，目前支持私钥和密码登录
+   user: ""
 
-      // 通过公私钥登录，推荐使用
-      // 私钥可通过 `ssh-keygen -t ed25519 -f ed25519` 命令生成
-      // 然后将 ed25519 私钥上传至
-      // 私钥路径，建议使用绝对地址
-      "identity": "",
+   # 私钥路径，建议使用绝对地
+   # 通过公私钥登录，推荐使用
+   #
+   # 私钥可通过其他设备上的 `ssh-keygen -t ed25519 -f ed25519` 命令生成
+   # 然后将 ed25519 私钥上传至运行设备上
+   identity: ""
 
-      // 使用密码登录，可选项
-      // 密码明文，应当在局域网环境使用
-      "password": ""
-   },
+   # 使用密码登录，可选项
+   # 密码明文，应当在局域网环境使用
+   password: ""
 
-   // 日志文件
-   "log": {
+# 日志设置
+log:
+   # 日志文件位置，默认为 pc.log
+   file: /tmp/log/pc.log
 
-      // 日志文件位置，默认为 pc.log
-      "file": "/tmp/log/pc.log",
+   # 是否打印代码位置
+   addSource: false
 
-      // 是否打印代码位置
-      "addSource": false,
-
-      // 日志级别
-      // log/slog/level.go:43
-      // LevelDebug Level = -4
-      // LevelInfo  Level = 0
-      // LevelWarn  Level = 4
-      // LevelError Level = 8
-      level: 0
-   },
-
-   // 巴法云的 UID，即控制台的私钥
-   "uid": "",
-
-   // topic-switch
-   "switch": {
-      // 主题的名称
-      "topic": "XXX006",
-
-      // Switch 只接收 on/off 两种指令，对应的操作
-      // 覆盖这里的指令之前，你应该在默认的 shell，Linux(sh)/Windows(cmd) 中测试一下，以确保关机指令和取消指令是正确的。
-      "on": "cmd /c shutdown /a",
-      "off": "cmd /c shutdown /s /t 600"
-   }
-}
+   # 日志级别
+   # 定义见 log/slog/level.go:43
+   # LevelDebug Level = -4
+   # LevelInfo  Level = 0
+   # LevelWarn  Level = 4
+   # LevelError Level = 8
+   level: 0
 
 
+bemfa:
+   # 巴法云的 UID，即控制台的私钥
+   uid: ""
+
+   # topic-switch
+   switch:
+
+      # 主题的名称
+      topic: XXX006
+
+      # Switch 只接收 on/off 两种指令，对应的操作
+      # 覆盖这里的指令之前，你应该在默认的 shell，Linux(sh)/Windows(cmd) 中测试一下，以确保关机指令和取消指令是正确的。
+      on: cmd /c shutdown /a
+      off: cmd /c shutdown /s /t 600
 ```
 
 ### 调试 `pc`
@@ -129,7 +117,7 @@ LEDE_ARCH="aarch64_cortex-a53" # cortex-a53 是 实现ARMv8-A 64位指令集的�
    # Linux 机器上，赋予 `pc` 执行权限
    chmod +x pc
    # 指定配置文件并运行
-   ./pc -config config.json
+   ./pc -config config.yml
    ```
 
 2. 通过巴法云推送消息
@@ -150,7 +138,7 @@ LEDE_ARCH="aarch64_cortex-a53" # cortex-a53 是 实现ARMv8-A 64位指令集的�
 3. 后台运行 `pc`
    若调试后无问题，即可在设备上后台运行 `pc`, 以捕获巴法云的消息推送
    ```bash
-   ./pc -config config.json &
+   ./pc -config config.yml &
    ```
 
 4. 巴法云接入 iot 软件

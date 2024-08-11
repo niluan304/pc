@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -9,6 +8,7 @@ import (
 	"runtime"
 
 	"github.com/nilluan304/pc/pc"
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -28,7 +28,7 @@ Env Info:
 Ref: %s
 `, commit, version, buildTime, runtime.Version(), ref)
 
-	config := flag.String("config", "config.json", "config file")
+	config := flag.String("config", "config.yml", "config file")
 
 	flag.Parse()
 
@@ -44,21 +44,21 @@ Ref: %s
 	}
 }
 
-func Load(file string) error {
-	data, err := os.ReadFile(file)
+func Load(path string) error {
+	data, err := os.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("read file: %+v, error: %w", file, err)
+		return fmt.Errorf("read file: %+v, error: %w", path, err)
 	}
 
 	var config *pc.Config
-	err = json.Unmarshal(data, &config)
+	err = yaml.Unmarshal(data, &config)
 	if err != nil {
 		return fmt.Errorf("json unmarshal: %s, error: %w", data, err)
 	}
 
-	err = pc.Run(config)
+	s, err := pc.NewServer(config)
 	if err != nil {
-		return fmt.Errorf("pc run, error: %w", err)
+		return fmt.Errorf("new server, error: %w", err)
 	}
-	return nil
+	return s.Run()
 }
