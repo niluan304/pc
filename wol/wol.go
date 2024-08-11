@@ -2,9 +2,9 @@ package wol
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"net"
+	"slices"
 )
 
 const port = 9 // WOL的默认端口号为9
@@ -14,15 +14,7 @@ const port = 9 // WOL的默认端口号为9
 func WakeOnLan(mac string, ip string) error {
 	hw, err := net.ParseMAC(mac)
 	if err != nil {
-		return errors.Join(err, fmt.Errorf("MAC: 输入不正确: %s", mac))
-	}
-
-	// 广播MAC地址 FF:FF:FF:FF:FF:FF
-	broadcast := []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
-	buf := bytes.NewBuffer(broadcast)
-
-	for range 16 {
-		buf.Write(hw)
+		return fmt.Errorf("MAC 地址错误: %s, err: %w", mac, err)
 	}
 
 	sender := net.UDPAddr{
@@ -35,17 +27,24 @@ func WakeOnLan(mac string, ip string) error {
 		Port: 0,
 		Zone: "",
 	}
+
 	conn, err := net.DialUDP("udp", &sender, &target)
 	if err != nil {
-		return errors.Join(err, fmt.Errorf("dial udp(%s) error", ip))
+		return fmt.Errorf("dial udp(%s) error, err: %w", ip, err)
 	}
 	defer conn.Close()
 
-	// 获得唤醒魔术包
-	mp := buf.Bytes()
-	_, err = conn.Write(mp)
+	// 广播MAC地址 FF:FF:FF:FF:FF:FF
+	broadcast := []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
+
+	// 封装为唤醒魔术包
+	magicPackage := slices.Concat(
+		broadcast,
+		bytes.Repeat(hw, 16),
+	)
+	_, err = conn.Write(magicPackage)
 	if err != nil {
-		return errors.Join(err, fmt.Errorf("send magic package error： %s", mp))
+		return fmt.Errorf("send magic package error： %s, err: %w", magicPackage, err)
 	}
 
 	return nil

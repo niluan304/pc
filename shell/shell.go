@@ -2,7 +2,6 @@ package shell
 
 import (
 	"cmp"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -21,7 +20,7 @@ func Shell(sh string) (out []byte, err error) {
 
 	out, err = cmd.CombinedOutput()
 	if err != nil {
-		return nil, errors.Join(err, fmt.Errorf("sh: %s", sh))
+		return nil, fmt.Errorf("sh: %s, err: %w", sh, err)
 	}
 	return out, nil
 }

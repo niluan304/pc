@@ -1,68 +1,65 @@
 package pc
 
 import (
+	"errors"
+	"log/slog"
+
 	"github.com/nilluan304/pc/bemfa"
 	"github.com/nilluan304/pc/wol"
 )
 
-type Config struct {
-	MyIP      string `json:"myIP"`      // 当前程序所在主机的局域网IP
-	TargetMac string `json:"targetMac"` // 目标主机的主板网卡MAC地址
-
-	SSH *SSH `json:"ssh,omitempty"` // 目标主机的 ssh 配置
-
-	Log *Log `json:"log,omitempty"` // 日志配置
-
-	Uid    string `json:"uid"` // 巴法云配置
-	Switch struct {
-		Topic string `json:"topic"` // 巴法云 topic 名称
-		On    string `json:"on"`    //  on 指令时的执行的 shell 脚本
-		Off   string `json:"off"`   // off 指令时的执行的 shell 脚本
-	} `json:"switch"`
+type Server struct {
+	logger *slog.Logger
+	bemfa  *bemfa.Bemfa
 }
 
-func Run(config *Config) error {
-	s := bemfa.NewSwitch(
-		// todo handle Command out
-
-		func() (err error) {
-			out, _ := config.SSH.Command(config.Switch.On)
-			_ = out
-
-			err = wol.WakeOnLan(config.TargetMac, config.MyIP)
-			if err != nil {
-				return err
-			}
-
-			return nil
-		},
-		func() (err error) {
-			out, err := config.SSH.Command(config.Switch.Off)
-			if err != nil {
-				return err
-			}
-
-			_ = out
-
-			return nil
-		},
-	)
+func NewServer(config *Config) (*Server, error) {
+	// todo check config
 
 	logger, err := config.Log.Logger()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	topics := map[string]bemfa.Topic{
-		config.Switch.Topic: s,
+		config.Bemfa.Switch.Topic: bemfa.NewSwitch(
+			func() (err error) {
+				err1 := wol.WakeOnLan(config.TargetMac, config.MyIP)
+				out, err2 := config.SSH.Command(config.Bemfa.Switch.On)
+				if err = errors.Join(err1, err2); err != nil {
+					return err
+				}
+
+				logger.Debug("switch on", "out", out)
+				return nil
+			},
+			func() (err error) {
+				out, err := config.SSH.Command(config.Bemfa.Switch.Off)
+				if err != nil {
+					return err
+				}
+
+				logger.Debug("switch off", "out", out)
+				return nil
+			},
+		),
 	}
 
-	b, err := bemfa.New(config.Uid, topics, bemfa.WithLogger(logger.WithGroup("bemfa")))
+	b, err := bemfa.New(config.Bemfa.Uid, topics, bemfa.WithLogger(logger.WithGroup("b")))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	logger.Info("pc start", "listen bemfa", topics)
+	s := &Server{
+		logger: logger,
+		bemfa:  b,
+	}
 
-	return b.Listen()
+	return s, nil
+}
+
+func (s *Server) Run() error {
+	s.logger.Info("pc start", "listen bemfa", s.bemfa)
+
+	return s.bemfa.Listen()
 }

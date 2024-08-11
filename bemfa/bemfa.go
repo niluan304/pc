@@ -64,16 +64,16 @@ func New(uid string, topics map[string]Topic, opts ...Option) (*Bemfa, error) {
 		opt(b)
 	}
 
-	if err := b.subscribe(); err != nil {
-		return nil, err
-	}
-
 	return b, nil
 }
 
 // Listen
 // keepalive and listen to msg
 func (b *Bemfa) Listen() error {
+	if err := b.subscribe(); err != nil {
+		return err
+	}
+
 	go b.reconnect()
 	go b.keepalive()
 
@@ -119,7 +119,7 @@ func (b *Bemfa) reconnect() {
 func (b *Bemfa) subscribe() error {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
-		return errors.Join(err, fmt.Errorf("fail to dial %s", addr))
+		return fmt.Errorf("fail to dial %s, err: %w", addr, err)
 	}
 
 	b.conn = conn
@@ -140,7 +140,7 @@ func (b *Bemfa) subscribe() error {
 
 		err := b.write(fmt.Sprintf(`cmd=%s&uid=%s&topic=%s`, cmdSubscribe, b.uid, topic))
 		if err != nil {
-			return errors.Join(err, fmt.Errorf("fail to subscribe topic(%s)", topic))
+			return fmt.Errorf("fail to subscribe topic(%s), err: %w", topic, err)
 		}
 	}
 	return nil
@@ -160,7 +160,7 @@ func (b *Bemfa) listen() error {
 		}
 
 		b.disconnect <- struct{}{}
-		return errors.Join(err, fmt.Errorf("conn fail to read buf"))
+		return fmt.Errorf("conn fail to read buf, err: %w", err)
 	}
 
 	// 请求过多时，可以考虑使用 channel 以实现读写分离
@@ -175,7 +175,7 @@ func (b *Bemfa) handle(buf []byte) (err error) {
 	var cmd string
 	_, err = fmt.Fscanf(r, "cmd=%s ", &cmd) // ping
 	if err != nil {
-		return errors.Join(err, fmt.Errorf("handle fail to read cmd from: %s", buf))
+		return fmt.Errorf("handle fail to read cmd from: %s, err: %w", buf, err)
 	}
 
 	switch cmd {
@@ -183,14 +183,14 @@ func (b *Bemfa) handle(buf []byte) (err error) {
 		var res string
 		_, err = fmt.Fscanf(r, "res=%s", &res)
 		if err != nil {
-			return errors.Join(err, fmt.Errorf("fail to scan(&res) from: %s", buf))
+			return fmt.Errorf("fail to scan(&res) from: %s, err: %w", buf, err)
 		}
 
 	case cmdPush:
 		var uid, topic, msg string
 		_, err = fmt.Fscanf(r, "uid=%s topic=%s msg=%s", &uid, &topic, &msg)
 		if err != nil {
-			return errors.Join(err, fmt.Errorf("fail to scan(&uid, &topic, &msg) from: %s", buf))
+			return fmt.Errorf("fail to scan(&uid, &topic, &msg) from: %s, err: %w", buf, err)
 		}
 
 		if uid != b.uid {
@@ -204,7 +204,7 @@ func (b *Bemfa) handle(buf []byte) (err error) {
 
 		err = t.Handle(msg)
 		if err != nil {
-			return errors.Join(err, fmt.Errorf("fail to handle msg(%s)", msg))
+			return fmt.Errorf("fail to handle msg(%s), err: %w", msg, err)
 		}
 	}
 
@@ -256,7 +256,7 @@ write:
 
 		_ = b.conn.Close()
 		b.disconnect <- struct{}{}
-		return errors.Join(err, fmt.Errorf("fail to write(%s)", req))
+		return fmt.Errorf("fail to write(%s), err: %w", req, err)
 	}
 
 	return nil

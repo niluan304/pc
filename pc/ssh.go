@@ -1,7 +1,6 @@
 package pc
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -22,11 +21,8 @@ func (s *SSH) Command(cmd string) ([]byte, error) {
 		auth = append(auth, ssh.Password(s.Password))
 	}
 
-	if s.Identity != "" {
-		authMethod, _ := WithPrivate(s.Identity)
-		if authMethod != nil {
-			auth = append(auth, authMethod)
-		}
+	if authMethod, _ := WithPrivate(s.Identity); authMethod != nil {
+		auth = append(auth, authMethod)
 	}
 
 	client, err := ssh.Dial("tcp", s.Addr, &ssh.ClientConfig{
@@ -39,20 +35,20 @@ func (s *SSH) Command(cmd string) ([]byte, error) {
 		Timeout:           20 * time.Second,
 	})
 	if err != nil {
-		return nil, errors.Join(err, fmt.Errorf("connect to server (%s) failed", s.Addr))
+		return nil, fmt.Errorf("connect to server (%s) failed, err: %w", s.Addr, err)
 	}
 	defer client.Close()
 
 	session, err := client.NewSession()
 	if err != nil {
-		return nil, errors.Join(err, fmt.Errorf("create session failed"))
+		return nil, fmt.Errorf("create session failed, err: %w", err)
 	}
 
 	defer session.Close()
 
 	out, err := session.CombinedOutput(cmd)
 	if err != nil {
-		return nil, errors.Join(err, fmt.Errorf("execute command (%s) failed", cmd))
+		return nil, fmt.Errorf("execute command (%s) failed, err: %w", cmd, err)
 	}
 	return out, nil
 }
@@ -60,12 +56,12 @@ func (s *SSH) Command(cmd string) ([]byte, error) {
 func WithPrivate(private string) (ssh.AuthMethod, error) {
 	pem, err := os.ReadFile(private)
 	if err != nil {
-		return nil, errors.Join(err, fmt.Errorf("read private key file (%s) failed", private))
+		return nil, fmt.Errorf("read private key file (%s) failed, err: %w", private, err)
 	}
 
 	signer, err := ssh.ParsePrivateKey(pem)
 	if err != nil {
-		return nil, errors.Join(err, fmt.Errorf("parse private key file (%s) failed", private))
+		return nil, fmt.Errorf("parse private key file (%s) failed, err: %w", private, err)
 	}
 
 	return ssh.PublicKeys(signer), nil
