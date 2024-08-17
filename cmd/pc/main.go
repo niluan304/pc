@@ -7,8 +7,9 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/nilluan304/pc/pc"
 	"gopkg.in/yaml.v3"
+
+	"github.com/nilluan304/pc/pc"
 )
 
 var (
@@ -19,7 +20,7 @@ var (
 )
 
 func main() {
-	fmt.Fprintf(os.Stdout, `Welcome to PC! 
+	fmt.Fprintf(os.Stdout, `Welcome to PC!
 Env Info:
     Git Commit: %s
     PC Version: %s
@@ -60,5 +61,11 @@ func Load(path string) error {
 	if err != nil {
 		return fmt.Errorf("new server, error: %w", err)
 	}
-	return s.Run()
+
+	err = s.Run()
+	if err != nil {
+		return fmt.Errorf("run server, error: %w", err)
+	}
+
+	return nil
 }

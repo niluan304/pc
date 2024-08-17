@@ -54,6 +54,7 @@ func New(uid string, topics map[string]Topic, opts ...Option) (*Bemfa, error) {
 	}
 
 	b := &Bemfa{
+		conn:       nil,
 		uid:        uid,
 		topics:     topics,
 		disconnect: make(chan struct{}),
@@ -124,7 +125,7 @@ func (b *Bemfa) subscribe() error {
 
 	b.conn = conn
 
-	var topics []string
+	topics := make([]string, 0, len(b.topics))
 	for topic := range b.topics {
 		topics = append(topics, topic)
 	}
