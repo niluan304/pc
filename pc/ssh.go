@@ -9,10 +9,10 @@ import (
 )
 
 type SSH struct {
-	Addr     string `json:"addr"`
-	User     string `json:"user"`
-	Identity string `json:"identity"`
-	Password string `json:"password"`
+	Addr     string `yaml:"addr"`
+	User     string `yaml:"user"`
+	Identity string `yaml:"identity"`
+	Password string `yaml:"password"`
 }
 
 func (s *SSH) Command(cmd string) ([]byte, error) {

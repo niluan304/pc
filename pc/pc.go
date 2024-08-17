@@ -2,6 +2,7 @@ package pc
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/nilluan304/pc/bemfa"
@@ -47,7 +48,7 @@ func NewServer(config *Config) (*Server, error) {
 
 	b, err := bemfa.New(config.Bemfa.Uid, topics, bemfa.WithLogger(logger.WithGroup("b")))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("bemfa.New: %w", err)
 	}
 
 	s := &Server{
@@ -61,5 +62,10 @@ func NewServer(config *Config) (*Server, error) {
 func (s *Server) Run() error {
 	s.logger.Info("pc start", "listen bemfa", s.bemfa)
 
-	return s.bemfa.Listen()
+	err := s.bemfa.Listen()
+	if err != nil {
+		return fmt.Errorf("bemfa.Listen: %w", err)
+	}
+
+	return nil
 }
