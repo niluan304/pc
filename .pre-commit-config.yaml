@@ -6,6 +6,7 @@ repos:
     hooks:
       - id: check-merge-conflict
       - id: trailing-whitespace
+
   - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
     rev: v9.16.0
     hooks:
@@ -17,6 +18,5 @@ repos:
     rev: v1.0.0-rc.1
     hooks:
       - id: go-mod-tidy
-      - id: go-fumpt
       - id: golangci-lint-mod
       - id: go-build-mod

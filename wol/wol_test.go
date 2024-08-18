@@ -1,7 +1,9 @@
-package wol
+package wol_test
 
 import (
 	"testing"
+
+	"github.com/nilluan304/pc/wol"
 )
 
 func TestWakeOnLan(t *testing.T) {
@@ -25,7 +27,7 @@ func TestWakeOnLan(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := WakeOnLan(tt.args.mac, tt.args.ip); (err != nil) != tt.wantErr {
+			if err := wol.WakeOnLan(tt.args.mac, tt.args.ip); (err != nil) != tt.wantErr {
 				t.Errorf("WakeOnLan() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

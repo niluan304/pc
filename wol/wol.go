@@ -11,7 +11,7 @@ const port = 9 // WOL的默认端口号为9
 
 // WakeOnLan
 // 网络唤醒魔术包技术白皮书地址: https://www.amd.com/system/files/TechDocs/20213.pdf
-func WakeOnLan(mac string, ip string) error {
+func WakeOnLan(mac, ip string) error {
 	hw, err := net.ParseMAC(mac)
 	if err != nil {
 		return fmt.Errorf("MAC 地址错误: %s, err: %w", mac, err)
