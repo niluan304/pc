@@ -15,7 +15,7 @@ run:
 
   # Include test files or not.
   # Default: true
-  tests: false
+  tests: true
 
   # List of build tags, all linters use it.
   # Default: []
@@ -71,26 +71,33 @@ output:
   #     - format: colored-line-number
   #       path: stdout
   formats:
-    # - format: json
-    # - path: stderr
-    - format: checkstyle
-      path: report.xml
+    #- format: json
+    #  path: stderr
+    #- format: checkstyle
+    #  path: report.xml
     - format: colored-line-number
+      path: stdout
+
   # Print lines of code with issue.
   # Default: true
-  print-issued-lines: false
+  print-issued-lines: true
+
   # Print linter name in the end of issue text.
   # Default: true
-  print-linter-name: false
+  print-linter-name: true
+
   # Make issues output unique by line.
   # Default: true
-  uniq-by-line: false
+  uniq-by-line: true
+
   # Add a prefix to the output file references.
   # Default: ""
   path-prefix: ""
+
   # Sort results by the order defined in `sort-order`.
   # Default: false
   sort-results: true
+
   # Order to use when sorting results.
   # Require `sort-results` to `true`.
   # Possible values: `file`, `linter`, and `severity`.
@@ -108,6 +115,7 @@ output:
     - linter
     - severity
     - file # filepath, line, and column.
+
   # Show statistics per linter.
   # Default: false
   show-stats: true
@@ -116,6 +124,7 @@ linters:
   # Disable all linters.
   # Default: false
   disable-all: true
+
   # Enable specific linter
   # https://golangci-lint.run/usage/linters/#enabled-by-default
   enable:
@@ -181,7 +190,7 @@ linters:
     - noctx
     - nolintlint
     - nosprintfhostport
-    - paralleltest
+    #    - paralleltest
     - perfsprint
     - prealloc
     - predeclared
@@ -212,25 +221,31 @@ linters:
 
 linters-settings:
   revive:
+
     # Maximum number of open files at the same time.
     # See https://github.com/mgechev/revive#command-line-flags
     # Defaults to unlimited.
     max-open-files: 2048
+
     # When set to false, ignores files with "GENERATED" header, similar to golint.
     # See https://github.com/mgechev/revive#available-rules for details.
     # Default: false
     ignore-generated-header: true
+
     # Sets the default severity.
     # See https://github.com/mgechev/revive#configuration
     # Default: warning
     severity: error
+
     # Enable all available rules.
     # Default: false
-    #    enable-all-rules: true
+    enable-all-rules: false
+
     # Sets the default failure confidence.
     # This means that linting errors with less than 0.8 confidence will be ignored.
     # Default: 0.8
-    confidence: 0.1
+    confidence: 0.8
+
     rules:
       - name: atomic
       - name: line-length-limit
@@ -288,20 +303,25 @@ linters-settings:
       - G504 # Import blocklist: net/http/cgi
       - G505 # Import blocklist: crypto/sha1
       - G601 # Implicit memory aliasing of items from a range statement
+
     # Exclude generated files
     # Default: false
     exclude-generated: true
+
     # Filter out the issues with a lower severity than the given value.
     # Valid options are: low, medium, high.
     # Default: low
     severity: medium
+
     # Filter out the issues with a lower confidence than the given value.
     # Valid options are: low, medium, high.
     # Default: low
     confidence: medium
+
     # Concurrency value.
     # Default: the number of logical CPUs usable by the current process.
     concurrency: 12
+
     # To specify the configuration of rules.
 
   gci:
@@ -312,15 +332,17 @@ linters-settings:
     # Default: ["standard", "default"]
     sections:
       - standard # Standard section: captures all standard packages.
+      - prefix(golang.org/x) # Custom section: groups all imports with the specified Prefix.
       - default # Default section: contains all imports that could not be matched to another section type.
-      - prefix(github.com/org/project) # Custom section: groups all imports with the specified Prefix.
-      - blank # Blank section: contains all blank imports. This section is not present unless explicitly enabled.
-      #      - dot # Dot section: contains all dot imports. This section is not present unless explicitly enabled.
-      #      - alias # Alias section: contains all alias imports. This section is not present unless explicitly enabled.
+      #- blank # Blank section: contains all blank imports. This section is not present unless explicitly enabled. eg: _ "github.com/golang/blank"
+      #- dot # Dot section: contains all dot imports. This section is not present unless explicitly enabled. eg: . "github.com/golang/dot"
+      #- alias # Alias section: contains all alias imports. This section is not present unless explicitly enabled. eg: go "github.com/golang"b
       - localmodule # Local module section: contains all local packages. This section is not present unless explicitly enabled.
+
     # Skip generated files.
     # Default: true
     skip-generated: true
+
     # Enable custom order of sections.
     # If `true`, make the section order the same as the order of `sections`.
     # Default: false
@@ -330,27 +352,35 @@ linters-settings:
     # Minimal length of string constant.
     # Default: 3
     min-len: 2
+
     # Minimum occurrences of constant string count to trigger issue.
     # Default: 3
     min-occurrences: 2
+
     # Ignore test files.
     # Default: false
     ignore-tests: true
+
     # Look for existing constants matching the values.
     # Default: true
     match-constant: false
+
     # Search also for duplicated numbers.
     # Default: false
     numbers: true
+
     # Minimum value, only works with goconst.numbers
     # Default: 3
     min: 2
+
     # Maximum value, only works with goconst.numbers
     # Default: 3
     max: 2
+
     # Ignore when constant is not used as function argument.
     # Default: true
     ignore-calls: true
+
     # Exclude strings matching the given regular expression.
     # Default: ""
     ignore-strings: 'foo.+'
@@ -358,19 +388,24 @@ linters-settings:
   unused:
     # Mark all struct fields that have been written to as used.
     # Default: true
-    field-writes-are-uses: false
+    field-writes-are-uses: true
+
     # Treat IncDec statement (e.g. `i++` or `i--`) as both read and write operation instead of just write.
     # Default: false
     post-statements-are-reads: true
+
     # Mark all exported fields as used.
     # default: true
-    exported-fields-are-used: false
+    exported-fields-are-used: true
+
     # Mark all function parameters as used.
     # default: true
     parameters-are-used: true
+
     # Mark all local variables as used.
     # default: true
     local-variables-are-used: true
+
     # Mark all identifiers inside generated files as used.
     # Default: true
     generated-is-used: true
@@ -379,6 +414,7 @@ linters-settings:
     # Simplify code: gofmt with `-s` option.
     # Default: true
     simplify: false
+
     # Apply the rewrite rules to the source before reformatting.
     # https://pkg.go.dev/cmd/gofmt
     # Default: []
@@ -392,15 +428,18 @@ linters-settings:
     # Module path which contains the source code being formatted.
     # Default: ""
     module-path: github.com/niluan304/pc
+
     # Choose whether to use the extra rules.
     # Default: false
-    # extra-rules: true
+    extra-rules: true
+
 
   # https://golangci-lint.run/usage/linters/#staticcheck
   staticcheck:
     # SAxxxx checks in https://staticcheck.io/docs/configuration/options/#checks
     # Default: ["*"]
     checks: [ "all","-SA1019","-SA4015","-SA1029","-SA1016","-SA9003","-SA4006","-SA6003" ]
+
 
   # https://golangci-lint.run/usage/linters/#govet
   govet:
@@ -419,6 +458,7 @@ linters-settings:
         # Whether to be strict about shadowing; can be noisy.
         # Default: false
         # strict: false
+
       unusedresult:
         # Comma-separated list of functions whose results must be used
         # (in addition to defaults context.WithCancel,context.WithDeadline,context.WithTimeout,context.WithValue,
@@ -427,14 +467,17 @@ linters-settings:
         funcs:
           - pkg.MyFunc
           - context.WithCancel
+
         # Comma-separated list of names of methods of type func() string whose results must be used
         # (in addition to default Error,String)
         # Default []
         stringmethods:
           - MyMethod
+
     # Enable all analyzers.
     # Default: false
     enable-all: true
+
     # Disable analyzers by name.
     # Run `go tool vet help` to see all analyzers.
     # Default: []
@@ -473,3 +516,45 @@ linters-settings:
       - unreachable
       - unsafeptr
       - unusedwrite
+
+  lll:
+    # Max line length, lines longer will be reported.
+    # '\t' is counted as 1 character by default, and can be changed with the tab-width option.
+    # Default: 120.
+    line-length: 200
+
+    # Tab width in spaces.
+    # Default: 1
+    tab-width: 1
+
+  misspell:
+    # Correct spellings using locale preferences for US or UK.
+    # Setting locale to US will correct the British spelling of 'colour' to 'color'.
+    # Default is to use a neutral variety of English.
+    locale: US
+
+    # Typos to ignore.
+    # Should be in lower case.
+    # Default: []
+    ignore-words:
+      - Bemfa
+
+    # Extra word corrections.
+    # `typo` and `correction` should only contain letters.
+    # The words are case-insensitive.
+    # Default: []
+    extra-words:
+      - typo: "iff"
+        correction: "if"
+      - typo: "cancelation"
+        correction: "cancellation"
+
+    # Mode of the analysis:
+    # - default: checks all the file content.
+    # - restricted: checks only comments.
+    # Default: ""
+    mode: restricted
+
+
+issues:
+  fix: true
