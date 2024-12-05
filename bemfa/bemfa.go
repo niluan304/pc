@@ -213,15 +213,15 @@ func (b *Bemfa) handle(buf []byte) (err error) {
 }
 
 // keepalive
-// Call Ping every 30 seconds
+// Call Ping every 45 seconds
 func (b *Bemfa) keepalive() {
 	for {
-		if err := b.Ping(); err != nil {
+		err := b.Ping()
+		if err != nil {
 			b.logger.Error("keepalive", "err", err)
-			time.Sleep(time.Second * 2)
-			continue
 		}
-		time.Sleep(time.Second * 30)
+
+		time.Sleep(time.Second * 45)
 	}
 }
 
